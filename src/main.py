@@ -1,11 +1,7 @@
-import getpass
 import os
 import streamlit as st
 from dotenv import load_dotenv
 
-from langchain_core.messages import HumanMessage, AIMessage
-from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_openai import ChatOpenAI
 from langchain.chat_models import init_chat_model
 
 
@@ -14,37 +10,39 @@ load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 os.environ["OPENAI_BASE_URL"] = "https://models.github.ai/inference"
 
-message_history = []
+
+if "message_history" not in st.session_state:
+    st.session_state.message_history = []
 
 model = init_chat_model("gpt-4.1-mini", model_provider="openai")
 
-msg = model.invoke([HumanMessage(content="Hi! I'm Bob")])
-
-# model = ChatOpenAI(model="gpt-4.1-mini")
-
-# msg = model.invoke(
-#     [HumanMessage(content="Hi! I'm sam!"),
-#     AIMessage(content="hi, how can i assist"),
-#     HumanMessage(content="Hi! whats my name")]
-# )
-
-print(msg.content)
-
-
-# def history_loader(session_id: str):
-#     pass
-
-
-# RunnableWithMessageHistory(model, get_session_history=history_loader)
-
-
-st.set_page_config(page_title="Buddy", page_icon="🤖")
+st.set_page_config(page_title="Buddy", page_icon="./src/resources/buddy.png")
 
 st.title("Buddy")
-st.write("Your friendly ai bot")
+st.subheader("Your friendly ai bot")
 
-user_msg = st.chat_input(placeholder="What's in your mind")
 
-if user_msg:
-    print("msg: ", user_msg)
+user_input = st.chat_input(placeholder="What's in your mind")
 
+
+for message in st.session_state.message_history:
+    if message["role"] == "ai":
+        with st.chat_message("assistant", avatar="./src/resources/buddy.png"):
+            st.markdown(message["content"])
+    elif message["role"] == "human":
+        with st.chat_message("human", avatar="./src/resources/human.png"):
+            st.markdown(message["content"])
+
+if user_input:
+
+    with st.chat_message("human", avatar="./src/resources/human.png"):
+            st.markdown(user_input)
+
+    st.session_state.message_history.append({"role": "human", "content": user_input})
+
+    ai_msg = model.invoke(st.session_state.message_history)
+
+    st.session_state.message_history.append({"role": "ai", "content": ai_msg.content})
+    
+    with st.chat_message("assistant", avatar="./src/resources/buddy.png"):
+        st.markdown(ai_msg.content)
